@@ -32,6 +32,7 @@ Live site: https://rajkumar71234-ui.github.io/valmiki-ramayanam/
 2. Write `content/<k>/<sss>.ta.json` (story, scenes, meanings — see `content/1/002.ta.json`).
 3. Draw the pictures with `tools/art.py` (see `tools/art_1_002.py`).
 4. Build: `python3 tools/build_sarga.py <k> <s> --check <second-source.json>`
+   After changing anything in `assets/`, run `python3 tools/bump_assets.py` so browsers load the new files.
    (needs `pip install aksharamukha`). The check flags verses that differ from a second edition.
 
 ## Sources and credits

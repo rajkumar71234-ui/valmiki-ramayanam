@@ -316,6 +316,15 @@
     return out;
   }
 
+  function noTamilVoiceTip() {
+    var ua = navigator.userAgent || "";
+    var base = "இந்தக் கருவியில் தமிழ்க் குரல் இல்லை. ";
+    if (/Android/i.test(ua)) return base + "Settings → Google Text-to-speech → தமிழ் (Tamil) குரலைப் பதிவிறக்கவும்.";
+    if (/iPhone|iPad|iPod/i.test(ua)) return base + "Settings → Accessibility → Spoken Content → Voices → Tamil குரலைப் பதிவிறக்கவும்.";
+    if (/Edg\//.test(ua)) return base + "Windows Settings → Time & language → Speech → Tamil குரலைச் சேர்க்கவும்.";
+    return base + "கணினியில் Microsoft Edge உலாவியில் திறந்தால் தமிழ்க் குரல் கிடைக்கும்.";
+  }
+
   var Player = (function () {
     var st = { items: [], groups: [], i: 0, playing: false, paused: false, cur: null, title: "", errors: 0, note: "" };
     var bar = null;
@@ -343,7 +352,7 @@
       st.items = []; st.groups = [];
       var ta = Speech.voiceFor("ta");
       var dv = Speech.voiceFor("sa") || Speech.voiceFor("hi") || Speech.voiceFor("mr") || Speech.voiceFor("ne");
-      st.note = ta ? "" : "இந்தக் கருவியில் தமிழ்க் குரல் கிடைக்கவில்லை. Android: Settings → Google Text-to-speech → தமிழ் குரலை நிறுவவும்.";
+      st.note = ta ? "" : noTamilVoiceTip();
       function add(g, text, lang, voice, rate) {
         if (text && String(text).trim()) st.items.push({ g: g, text: String(text).trim(), lang: lang, voice: voice, rate: rate });
       }
