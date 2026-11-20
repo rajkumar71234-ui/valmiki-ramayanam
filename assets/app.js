@@ -184,8 +184,9 @@
       (d.subtitle ? '<p class="sub">' + esc(d.subtitle) + "</p>" : "") + "</header>" +
       '<figure class="card hero-fig"><img src="' + esc(d.chapter_image.src) + '" alt="' + esc(d.chapter_image.alt) +
       '" width="800" height="500"><figcaption>' + esc(d.chapter_image.alt) + "</figcaption></figure>" +
-      '<section class="card story"><h2>கதைச் சுருக்கம்</h2>' +
-      d.story.map(function (p) { return "<p>" + esc(p) + "</p>"; }).join("") + "</section>";
+      '<section class="card story"><div class="story-head"><h2>கதைச் சுருக்கம்</h2>' +
+      (Speech.ok ? '<button type="button" class="listen" id="listenStory">' + ICON.speaker + "கேட்க</button>" : "") + "</div>" +
+      d.story.map(function (p, i) { return '<p id="sp' + i + '">' + esc(p) + "</p>"; }).join("") + "</section>";
 
     html += '<div class="toolbar" role="toolbar" aria-label="படிக்கும் அமைப்பு">' +
       '<div class="seg" id="scriptSeg" aria-label="ஸ்லோக எழுத்து">' +
@@ -196,7 +197,8 @@
       '<details class="howto"><summary>தமிழ் எழுத்தில் ஸம்ஸ்கிருதம் படிப்பது எப்படி?</summary><div>' +
       "எழுத்தின் மேலுள்ள சிறிய எண் ஒலியைக் குறிக்கிறது:<br>" +
       "<b>²</b> — மூச்சுடன் (kh, ch, ṭh, th, ph) · <b>³</b> — மென்மையாக (g, j, ḍ, d, b) · <b>⁴</b> — மென்மை + மூச்சு (gh, jh, ḍh, dh, bh)<br>" +
-      "உதாரணம்: <b>த⁴ர்ம</b> = dharma, <b>ப⁴க³வான்</b> = bhagavān, <b>ஶ</b> = ś (śloka), <b>(அ)</b> = ऽ</div></details>";
+      "உதாரணம்: <b>த⁴ர்ம</b> = dharma, <b>ப⁴க³வான்</b> = bhagavān, <b>ஶ</b> = ś (śloka), <b>(அ)</b> = ऽ</div></details>" +
+      (Speech.ok ? '<button type="button" class="listen big" id="listenVerses">' + ICON.speaker + "எல்லா ஸ்லோகங்களையும் தமிழ்ப் பொருளுடன் கேட்க</button>" : "");
 
     d.scenes.forEach(function (sc) {
       html += '<section class="scene" id="scene' + sc.id + '"><div class="scene-head"><span class="badge">காட்சி ' + sc.id +
@@ -210,7 +212,8 @@
         html += '<article class="card verse" id="v' + v.n + '"><span class="vnum">' + s + "." + v.n + "</span>" +
           slokaHtml(v) +
           '<p class="meaning"><b>பொருள்</b>' + esc(v.meaning) + "</p>" +
-          '<div class="vtools"><button type="button" data-copy="' + v.n + '">இணைப்பை நகலெடு</button>' +
+          '<div class="vtools">' + (Speech.ok ? '<button type="button" data-listen="' + v.n + '">' + ICON.speakerSm + "இங்கிருந்து கேட்க</button>" : "") +
+          '<button type="button" data-copy="' + v.n + '">இணைப்பை நகலெடு</button>' +
           (rep ? '<a href="' + rep + '" target="_blank" rel="noopener">பிழை தெரிவிக்க</a>' : "") + "</div></article>";
       }
       html += "</section>";
@@ -222,7 +225,7 @@
     html += '<p class="legend">' + esc(d.source || "") + "</p>";
 
     app.innerHTML = html;
-    wireSargamControls(kd, s);
+    wireSargamControls(kd, s, d);
     if (verse) {
       var el = document.getElementById("v" + verse);
       if (el) setTimeout(function () { el.scrollIntoView({ block: "start" }); }, 30);
@@ -237,7 +240,7 @@
   }
   function applyFont(px) { document.documentElement.style.setProperty("--fs", px + "px"); }
 
-  function wireSargamControls(kd, s) {
+  function wireSargamControls(kd, s, d) {
     applyScript(store.get("script", "ta"));
     var fs = store.get("fs", 17);
     applyFont(fs);
@@ -247,7 +250,13 @@
     };
     document.getElementById("fsUp").onclick = function () { fs = Math.min(24, fs + 1); applyFont(fs); store.set("fs", fs); };
     document.getElementById("fsDown").onclick = function () { fs = Math.max(14, fs - 1); applyFont(fs); store.set("fs", fs); };
+    var ls = document.getElementById("listenStory");
+    if (ls) ls.onclick = function () { Player.start("story", d, 0); };
+    var lv = document.getElementById("listenVerses");
+    if (lv) lv.onclick = function () { Player.start("verses", d, 0); };
     app.onclick = function (e) {
+      var lb = e.target.closest("button[data-listen]");
+      if (lb) { Player.start("verses", d, parseInt(lb.getAttribute("data-listen"), 10) - 1); return; }
       var b = e.target.closest("button[data-copy]"); if (!b) return;
       var url = location.href.split("#")[0] + sargamLink(kd, s, b.getAttribute("data-copy"));
       var original = b.textContent;
@@ -259,8 +268,201 @@
     };
   }
 
+  // ---------- read aloud (the phone's / browser's own text-to-speech voice) ----------
+  var ICON = {
+    speaker: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.6 8.6 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+    speakerSm: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+    play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
+    prev: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2.4v14H6zM20 5v14L9 12z"/></svg>',
+    next: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.6 5H18v14h-2.4zM4 5v14l11-7z"/></svg>',
+    stop: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5h11v11h-11z"/></svg>'
+  };
+
+  var Speech = (function () {
+    var synth = window.speechSynthesis;
+    var ok = !!(synth && window.SpeechSynthesisUtterance);
+    var voices = [];
+    function load() { try { voices = synth.getVoices() || []; } catch (e) { voices = []; } }
+    if (ok) {
+      load();
+      try { synth.addEventListener("voiceschanged", load); } catch (e) { synth.onvoiceschanged = load; }
+    }
+    function voiceFor(prefix) {
+      load();
+      for (var i = 0; i < voices.length; i++) {
+        var l = String(voices[i].lang || "").toLowerCase().replace(/_/g, "-");
+        if (l === prefix || l.indexOf(prefix + "-") === 0) return voices[i];
+      }
+      return null;
+    }
+    return { ok: ok, synth: synth, voiceFor: voiceFor };
+  })();
+
+  // Text clean-up so the voice reads naturally
+  function ttsTamil(t) { return String(t).replace(/ஶ/g, "ஷ"); }
+  function ttsSanskritTamil(t) {
+    return String(t).replace(/[¹²³⁴]/g, "").replace(/\(அ\)/g, "").replace(/ஶ/g, "ஷ")
+      .replace(/:/g, "").replace(/\s+/g, " ").trim();
+  }
+  function sentences(t) {
+    var parts = String(t).match(/[^.!?;—]+[.!?;—]*[”’"]*\s*/g) || [String(t)];
+    var out = [];
+    parts.forEach(function (p) {
+      p = p.trim();
+      if (!p) return;
+      if (out.length && p.length < 12) out[out.length - 1] += " " + p; else out.push(p);
+    });
+    return out;
+  }
+
+  var Player = (function () {
+    var st = { items: [], groups: [], i: 0, playing: false, paused: false, cur: null, title: "", errors: 0, note: "" };
+    var bar = null;
+    function $(id) { return document.getElementById(id); }
+
+    function ensureBar() {
+      if (bar) return;
+      bar = document.createElement("div");
+      bar.className = "player"; bar.id = "player"; bar.hidden = true;
+      bar.setAttribute("role", "region"); bar.setAttribute("aria-label", "ஒலி இயக்கி");
+      bar.innerHTML = '<div class="pl-info"><b id="plTitle"></b><span id="plPos"></span><span id="plMsg" class="pl-msg"></span></div>' +
+        '<div class="pl-btns">' +
+        '<button type="button" id="plPrev" aria-label="முந்தையது">' + ICON.prev + "</button>" +
+        '<button type="button" id="plPlay" class="pl-main" aria-label="இடைநிறுத்து">' + ICON.pause + "</button>" +
+        '<button type="button" id="plNext" aria-label="அடுத்தது">' + ICON.next + "</button>" +
+        '<button type="button" id="plStop" aria-label="நிறுத்து">' + ICON.stop + "</button></div>";
+      document.body.appendChild(bar);
+      $("plPrev").onclick = prev;
+      $("plNext").onclick = next;
+      $("plStop").onclick = stop;
+      $("plPlay").onclick = function () { if (st.paused) resume(); else pause(); };
+    }
+
+    function build(mode, d) {
+      st.items = []; st.groups = [];
+      var ta = Speech.voiceFor("ta");
+      var dv = Speech.voiceFor("sa") || Speech.voiceFor("hi") || Speech.voiceFor("mr") || Speech.voiceFor("ne");
+      st.note = ta ? "" : "இந்தக் கருவியில் தமிழ்க் குரல் கிடைக்கவில்லை. Android: Settings → Google Text-to-speech → தமிழ் குரலை நிறுவவும்.";
+      function add(g, text, lang, voice, rate) {
+        if (text && String(text).trim()) st.items.push({ g: g, text: String(text).trim(), lang: lang, voice: voice, rate: rate });
+      }
+      if (mode === "story") {
+        st.title = "கதைச் சுருக்கம்";
+        d.story.forEach(function (p, gi) {
+          st.groups.push({ id: "sp" + gi, start: st.items.length, label: "பகுதி " + (gi + 1) + " / " + d.story.length });
+          sentences(ttsTamil(p)).forEach(function (x) { add(gi, x, "ta-IN", ta, 0.95); });
+        });
+      } else {
+        st.title = "ஸ்லோகங்களும் பொருளும்";
+        d.verses.forEach(function (v, gi) {
+          st.groups.push({ id: "v" + v.n, start: st.items.length, label: "ஸ்லோகம் " + v.n + " / " + d.verses.length });
+          add(gi, "ஸ்லோகம் " + v.n + ".", "ta-IN", ta, 0.95);
+          if (ta || !dv) v.ta_script.forEach(function (l) { add(gi, ttsSanskritTamil(l), "ta-IN", ta, 0.85); });
+          else v.sa.forEach(function (l) { add(gi, l, dv.lang, dv, 0.85); });
+          add(gi, "பொருள்.", "ta-IN", ta, 0.95);
+          sentences(ttsTamil(v.meaning)).forEach(function (x) { add(gi, x, "ta-IN", ta, 0.95); });
+        });
+      }
+    }
+
+    function groupOf(i) { return st.items[i] ? st.items[i].g : -1; }
+    function groupStart(g) { return st.groups[g] ? st.groups[g].start : st.items.length; }
+    function msg(t) { if ($("plMsg")) $("plMsg").textContent = t || ""; }
+
+    function show() {
+      var g = groupOf(st.i);
+      var old = document.querySelectorAll(".speaking");
+      for (var k = 0; k < old.length; k++) old[k].classList.remove("speaking");
+      var el = st.groups[g] ? document.getElementById(st.groups[g].id) : null;
+      if (el) {
+        el.classList.add("speaking");
+        var r = el.getBoundingClientRect();
+        if (r.top < 70 || r.top > window.innerHeight - 150) el.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+      $("plTitle").textContent = st.title;
+      $("plPos").textContent = st.groups[g] ? st.groups[g].label : "";
+      var b = $("plPlay");
+      b.innerHTML = st.paused ? ICON.play : ICON.pause;
+      b.setAttribute("aria-label", st.paused ? "தொடர்ந்து கேட்க" : "இடைநிறுத்து");
+    }
+
+    function cancelNow() {
+      st.cur = null;
+      try { Speech.synth.cancel(); } catch (e) { /* ignore */ }
+    }
+
+    function speakCurrent() {
+      if (!st.playing || st.paused) return;
+      if (st.i >= st.items.length) { stop(); return; }
+      show();
+      var it = st.items[st.i];
+      var u = new SpeechSynthesisUtterance(it.text);
+      u.lang = it.lang;
+      if (it.voice) u.voice = it.voice;
+      u.rate = it.rate || 1;
+      u.onend = function () {
+        if (u !== st.cur || !st.playing || st.paused) return;
+        st.errors = 0;
+        st.i++;
+        speakCurrent();
+      };
+      u.onerror = function (e) {
+        if (u !== st.cur) return;
+        var er = e && e.error;
+        if (er === "interrupted" || er === "canceled") return;
+        st.errors++;
+        if (st.errors >= 3) { msg("குரலை இயக்க முடியவில்லை. " + st.note); st.paused = true; st.cur = null; show(); return; }
+        st.i++;
+        setTimeout(speakCurrent, 150);
+      };
+      st.cur = u;
+      try { Speech.synth.speak(u); } catch (e) { msg("குரலை இயக்க முடியவில்லை."); }
+    }
+
+    function go(i) {
+      cancelNow();
+      st.i = Math.max(0, Math.min(i, st.items.length - 1));
+      st.paused = false;
+      setTimeout(speakCurrent, 80);
+    }
+
+    function start(mode, d, fromGroup) {
+      if (!Speech.ok) return;
+      ensureBar();
+      cancelNow();
+      build(mode, d);
+      st.playing = true; st.paused = false; st.errors = 0;
+      st.i = groupStart(Math.max(0, Math.min(fromGroup || 0, st.groups.length - 1)));
+      bar.hidden = false;
+      document.body.classList.add("has-player");
+      msg(st.note);
+      show();
+      setTimeout(speakCurrent, 80);
+    }
+    function pause() { if (!st.playing) return; st.paused = true; cancelNow(); show(); }
+    function resume() { if (!st.playing) return; st.paused = false; show(); setTimeout(speakCurrent, 80); }
+    function prev() { if (!st.playing) return; var g = groupOf(st.i); go(groupStart(Math.max(0, g - 1))); }
+    function next() {
+      if (!st.playing) return;
+      var g = groupOf(st.i);
+      if (g + 1 < st.groups.length) go(groupStart(g + 1)); else stop();
+    }
+    function stop() {
+      st.playing = false; st.paused = false;
+      cancelNow();
+      var old = document.querySelectorAll(".speaking");
+      for (var k = 0; k < old.length; k++) old[k].classList.remove("speaking");
+      if (bar) bar.hidden = true;
+      document.body.classList.remove("has-player");
+    }
+    return { start: start, stop: stop, pause: pause, resume: resume, prev: prev, next: next, state: st };
+  })();
+  window.__player = Player;
+
   // ---------- router ----------
   function route() {
+    Player.stop();
     var h = decodeURIComponent((location.hash || "").replace(/^#/, ""));
     if (!h || h === "home") { renderHome(); window.scrollTo(0, 0); return; }
     var m = h.match(/^([a-z]+)(?:-(\d+))?(?:-v(\d+))?$/);

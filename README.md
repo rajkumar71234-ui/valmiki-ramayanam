@@ -5,7 +5,8 @@ A free reading site for the original **Valmiki Ramayanam**, sargam by sargam:
 - a Tamil story (கதைச் சுருக்கம்) for every sargam,
 - every Sanskrit shloka, in Tamil script (with ² ³ ⁴ marks) or Devanagari,
 - a Tamil meaning (பொருள்) under each shloka,
-- simple cartoon-style pictures for the chapter and for each scene.
+- simple cartoon-style pictures for the chapter and for each scene,
+- read-aloud buttons (story, and all shlokas with Tamil meaning) with previous / pause / next / stop, using the phone's own Tamil voice.
 
 Only Valmiki's text is followed: nothing from Kamba Ramayanam or TV versions.
 
