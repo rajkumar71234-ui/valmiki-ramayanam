@@ -288,13 +288,17 @@
       load();
       try { synth.addEventListener("voiceschanged", load); } catch (e) { synth.onvoiceschanged = load; }
     }
+    // Pick the best voice for a language: natural/neural voices first (Edge), then online ones, then any.
     function voiceFor(prefix) {
       load();
+      var best = null, bestScore = -1;
       for (var i = 0; i < voices.length; i++) {
-        var l = String(voices[i].lang || "").toLowerCase().replace(/_/g, "-");
-        if (l === prefix || l.indexOf(prefix + "-") === 0) return voices[i];
+        var v = voices[i], l = String(v.lang || "").toLowerCase().replace(/_/g, "-");
+        if (!(l === prefix || l.indexOf(prefix + "-") === 0)) continue;
+        var score = (/natural|neural/i.test(v.name) ? 4 : 0) + (/online|google/i.test(v.name) ? 2 : 0) + (l === prefix + "-in" ? 1 : 0);
+        if (score > bestScore) { best = v; bestScore = score; }
       }
-      return null;
+      return best;
     }
     return { ok: ok, synth: synth, voiceFor: voiceFor };
   })();
